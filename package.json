@@ -32,10 +32,16 @@
   "author": "jaskang",
   "module": "dist/babel-plugin-vue-next-jsx.esm.js",
   "devDependencies": {
+    "@types/babel-plugin-syntax-jsx": "^6.18.0",
     "@types/jest": "^25.1.4",
     "husky": "^4.2.3",
     "tsdx": "^0.13.1",
     "tslib": "^1.11.1",
     "typescript": "^3.8.3"
+  },
+  "dependencies": {
+    "@babel/core": "^7.9.0",
+    "@babel/plugin-syntax-jsx": "^7.8.3",
+    "@babel/types": "^7.9.0"
   }
 }
