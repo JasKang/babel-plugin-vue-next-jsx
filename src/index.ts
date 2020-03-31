@@ -7,6 +7,8 @@ import {
   JSXElement,
   JSXIdentifier,
   Expression,
+  ImportDeclaration,
+  ImportSpecifier,
 } from '@babel/types';
 
 type BaseBabel = typeof babel;
@@ -40,7 +42,7 @@ const getAttrs = (
         props.push(t.objectProperty(t.stringLiteral(name), value!));
       }
     } else if (attr.type === 'JSXSpreadAttribute') {
-      // TODO 支持解构
+      props.push(t.spreadElement(attr.argument));
     }
   });
 
@@ -74,7 +76,6 @@ const plugin = ({ types: t }: IBabel) => {
           // // 创建 Vue h
           const createElement = t.identifier('h');
           const attrs = getAttrs(openingPath.node.attributes, t);
-          // // 创建 h(tag,{...attrs}, [chidren])
           const callExpr = t.callExpression(createElement, [
             tagNode,
             attrs,
@@ -89,29 +90,38 @@ const plugin = ({ types: t }: IBabel) => {
         }
       },
       Program: {
-        exit() {
-          // console.log(path);
-          //   const hasImportedVue = path => {
-          //     return path.node.body.filter(p => p.type === 'ImportDeclaration').some(p => p.source.value == 'vue')
-          //   }
-          //   // 注入 h 函数
-          //   if (path.node.start === 0) {
-          //     if (!hasImportedVue(path)) {
-          //       path.node.body.unshift(
-          //         t.importDeclaration([t.ImportSpecifier(t.identifier('h'), t.identifier('h'))], t.stringLiteral('vue'))
-          //       )
-          //     } else {
-          //       const vueSource = path.node.body
-          //         .filter(p => p.type === 'ImportDeclaration')
-          //         .find(p => p.source.value == 'vue')
-          //       const key = vueSource.specifiers.map(s => s.imported.name)
-          //       if (key.includes('h')) {
-          //       } else {
-          //         vueSource.specifiers.unshift(t.ImportSpecifier(t.identifier('h'), t.identifier('h')))
-          //       }
-          //     }
-          //   }
-          // }
+        exit(path) {
+          const hasImportedVue = path.node.body
+            .filter(p => p.type === 'ImportDeclaration')
+            .some(p => (p as ImportDeclaration).source.value == 'vue');
+
+          // 注入 h 函数
+          if (path.node.start === 0) {
+            if (!hasImportedVue) {
+              path.node.body.unshift(
+                t.importDeclaration(
+                  [t.importSpecifier(t.identifier('h'), t.identifier('h'))],
+                  t.stringLiteral('vue')
+                )
+              );
+            } else {
+              const vueSource = path.node.body
+                .filter(p => p.type === 'ImportDeclaration')
+                .find(
+                  p => (p as ImportDeclaration).source.value == 'vue'
+                ) as ImportDeclaration;
+              const key = vueSource.specifiers
+                .filter(s => s.type === 'ImportSpecifier')
+                .map(s => (s as ImportSpecifier).imported.name);
+              if (key.includes('h')) {
+                // 已经引入 h 函数了
+              } else {
+                vueSource.specifiers.unshift(
+                  t.importSpecifier(t.identifier('h'), t.identifier('h'))
+                );
+              }
+            }
+          }
         },
       },
     },
